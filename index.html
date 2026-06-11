@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>VM-tips – Linus & Fannie</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+    input[type="number"] { width: 45px; }
+    input[type="text"] { width: 110px; }
+    .btn { padding: 6px 10px; border: 1px solid #ccc; background: #eee; cursor: pointer; }
+    .btn:hover { background: #e0e0e0; }
+    .disabled { background: #fafafa; color: #999; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>VM-tips – Linus & Fannie</h1>
+
+  <div>
+    <input type="text" id="team1" placeholder="Lag 1">
+    <input type="text" id="team2" placeholder="Lag 2">
+    <button class="btn" id="addMatchBtn">Lägg till match</button>
+  </div>
+
+  <table id="matchesTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Lag 1</th>
+        <th>Lag 2</th>
+        <th>Linus tips</th>
+        <th>Fannie tips</th>
+        <th>Resultat</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+  // 🔥 1. Klistra in din Firebase config här:
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCf5QQfpI4Kb9ajnaigcrlr9LIQGtEDxvY",
+    authDomain: "fotbolls-vm-2026-a35bc.firebaseapp.com",
+    databaseURL: "https://fotbolls-vm-2026-a35bc-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "fotbolls-vm-2026-a35bc",
+    storageBucket: "fotbolls-vm-2026-a35bc.firebasestorage.app",
+    messagingSenderId: "928596865074",
+    appId: "1:928596865074:web:8a157af193b73ab0938c2b",
+    measurementId: "G-78DCQ1Z56P"
+  };
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const matchesRef = db.ref("matches");
+
+  // 🔥 2. Lyssna i realtid
+  matchesRef.on("value", snapshot => {
+    const data = snapshot.val() || [];
+    renderTable(data);
+  });
+
+  // 🔥 3. Lägg till match
+  document.getElementById("addMatchBtn").onclick = () => {
+    const t1 = team1.value.trim();
+    const t2 = team2.value.trim();
+    if (!t1 || !t2) return alert("Fyll i båda lagen");
+
+    matchesRef.push({
+      team1: t1,
+      team2: t2,
+      linus: { home: null, away: null },
+      fannie: { home: null, away: null },
+      result: { home: null, away: null }
+    });
+
+    team1.value = "";
+    team2.value = "";
+  };
+
+  // 🔥 4. Rendera tabellen
+  function renderTable(matches) {
+    const tbody = document.querySelector("#matchesTable tbody");
+    tbody.innerHTML = "";
+
+    const keys = Object.keys(matches);
+
+    keys.forEach((key, i) => {
+      const m = matches[key];
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${m.team1}</td>
+        <td>${m.team2}</td>
+        <td>
+          <input type="number" id="lH${key}" value="${m.linus.home ?? ""}">
+          -
+          <input type="number" id="lA${key}" value="${m.linus.away ?? ""}">
+        </td>
+        <td>
+          <input type="number" id="fH${key}" value="${m.fannie.home ?? ""}">
+          -
+          <input type="number" id="fA${key}" value="${m.fannie.away ?? ""}">
+        </td>
+        <td>
+          <input type="number" id="rH${key}" value="${m.result.home ?? ""}">
+          -
+          <input type="number" id="rA${key}" value="${m.result.away ?? ""}">
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+
+      // Lås tips om resultat finns
+      const resultExists = m.result.home !== null && m.result.away !== null;
+
+      ["lH","lA","fH","fA"].forEach(prefix => {
+        const el = document.getElementById(prefix + key);
+        if (resultExists) {
+          el.disabled = true;
+          el.classList.add("disabled");
+        }
+        el.onchange = () => updateField(key, prefix, el.value);
+      });
+
+      ["rH","rA"].forEach(prefix => {
+        const el = document.getElementById(prefix + key);
+        el.onchange = () => updateField(key, prefix, el.value);
+      });
+    });
+  }
+
+  // 🔥 5. Uppdatera fält i Firebase
+  function updateField(key, prefix, value) {
+    const num = value === "" ? null : Number(value);
+
+    if (prefix.startsWith("lH")) matchesRef.child(key).child("linus/home").set(num);
+    if (prefix.startsWith("lA")) matchesRef.child(key).child("linus/away").set(num);
+    if (prefix.startsWith("fH")) matchesRef.child(key).child("fannie/home").set(num);
+    if (prefix.startsWith("fA")) matchesRef.child(key).child("fannie/away").set(num);
+    if (prefix.startsWith("rH")) matchesRef.child(key).child("result/home").set(num);
+    if (prefix.startsWith("rA")) matchesRef.child(key).child("result/away").set(num);
+  }
+</script>
+</body>
+</html>
