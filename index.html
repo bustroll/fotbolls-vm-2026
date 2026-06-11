@@ -46,10 +46,8 @@
 </div>
 
 <script>
-  // 🔥 1. Klistra in din Firebase config här:
-  // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-    const firebaseConfig = {
+  // 🔥 Din Firebase config (helt korrekt)
+  const firebaseConfig = {
     apiKey: "AIzaSyCf5QQfpI4Kb9ajnaigcrlr9LIQGtEDxvY",
     authDomain: "fotbolls-vm-2026-a35bc.firebaseapp.com",
     databaseURL: "https://fotbolls-vm-2026-a35bc-default-rtdb.europe-west1.firebasedatabase.app",
@@ -58,19 +56,20 @@
     messagingSenderId: "928596865074",
     appId: "1:928596865074:web:8a157af193b73ab0938c2b",
     measurementId: "G-78DCQ1Z56P"
-    };
+  };
 
+  // 🔥 Initiera Firebase (v8 syntax)
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const matchesRef = db.ref("matches");
 
-  // 🔥 2. Lyssna i realtid
+  // 🔥 Realtidslyssning
   matchesRef.on("value", snapshot => {
     const data = snapshot.val() || {};
     renderTable(data);
   });
 
-  // 🔥 3. Lägg till match
+  // 🔥 Lägg till match
   document.getElementById("addMatchBtn").onclick = () => {
     const t1 = team1.value.trim();
     const t2 = team2.value.trim();
@@ -88,7 +87,7 @@
     team2.value = "";
   };
 
-  // 🔥 4. Rendera tabellen
+  // 🔥 Rendera tabellen
   function renderTable(matches) {
     const tbody = document.querySelector("#matchesTable tbody");
     tbody.innerHTML = "";
@@ -140,7 +139,7 @@
     });
   }
 
-  // 🔥 5. Uppdatera fält i Firebase
+  // 🔥 Uppdatera fält i Firebase
   function updateField(key, prefix, value) {
     const num = value === "" ? null : Number(value);
 
