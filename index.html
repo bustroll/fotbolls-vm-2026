@@ -95,60 +95,72 @@
     const keys = Object.keys(matches);
 
     keys.forEach((key, i) => {
-      const m = matches[key];
-      const tr = document.createElement("tr");
+        const m = matches[key] || {};
 
-      tr.innerHTML = `
+        // ⭐ Säkra default-värden (förhindrar krascher)
+        const linus  = m.linus  || { home: null, away: null };
+        const fannie = m.fannie || { home: null, away: null };
+        const result = m.result || { home: null, away: null };
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
         <td>${i + 1}</td>
-        <td>${m.team1}</td>
-        <td>${m.team2}</td>
-        <td>
-          <input type="number" id="lH${key}" value="${m.linus.home ?? ""}">
-          -
-          <input type="number" id="lA${key}" value="${m.linus.away ?? ""}">
-        </td>
-        <td>
-          <input type="number" id="fH${key}" value="${m.fannie.home ?? ""}">
-          -
-          <input type="number" id="fA${key}" value="${m.fannie.away ?? ""}">
-        </td>
-        <td>
-          <input type="number" id="rH${key}" value="${m.result.home ?? ""}">
-          -
-          <input type="number" id="rA${key}" value="${m.result.away ?? ""}">
-        </td>
-      `;
+        <td>${m.team1 || ""}</td>
+        <td>${m.team2 || ""}</td>
 
-      tbody.appendChild(tr);
+        <td>
+            <input type="number" id="lH${key}" value="${linus.home ?? ""}">
+            -
+            <input type="number" id="lA${key}" value="${linus.away ?? ""}">
+        </td>
 
-      const resultExists = m.result.home !== null && m.result.away !== null;
+        <td>
+            <input type="number" id="fH${key}" value="${fannie.home ?? ""}">
+            -
+            <input type="number" id="fA${key}" value="${fannie.away ?? ""}">
+        </td>
 
-      ["lH","lA","fH","fA"].forEach(prefix => {
+        <td>
+            <input type="number" id="rH${key}" value="${result.home ?? ""}">
+            -
+            <input type="number" id="rA${key}" value="${result.away ?? ""}">
+        </td>
+        `;
+
+        tbody.appendChild(tr);
+
+        // ⭐ Lås tips om resultat finns
+        const resultExists = result.home !== null && result.away !== null;
+
+        ["lH","lA","fH","fA"].forEach(prefix => {
         const el = document.getElementById(prefix + key);
         if (resultExists) {
-          el.disabled = true;
-          el.classList.add("disabled");
+            el.disabled = true;
+            el.classList.add("disabled");
         }
         el.onchange = () => updateField(key, prefix, el.value);
-      });
+        });
 
-      ["rH","rA"].forEach(prefix => {
+        ["rH","rA"].forEach(prefix => {
         const el = document.getElementById(prefix + key);
         el.onchange = () => updateField(key, prefix, el.value);
-      });
+        });
     });
-  }
+    }
 
   // 🔥 Uppdatera fält i Firebase
   function updateField(key, prefix, value) {
     const num = value === "" ? null : Number(value);
 
-    if (prefix.startsWith("lH")) matchesRef.child(key).child("linus/home").set(num);
-    if (prefix.startsWith("lA")) matchesRef.child(key).child("linus/away").set(num);
-    if (prefix.startsWith("fH")) matchesRef.child(key).child("fannie/home").set(num);
-    if (prefix.startsWith("fA")) matchesRef.child(key).child("fannie/away").set(num);
-    if (prefix.startsWith("rH")) matchesRef.child(key).child("result/home").set(num);
-    if (prefix.startsWith("rA")) matchesRef.child(key).child("result/away").set(num);
+    if (prefix.startsWith("lH")) matchesRef.child(key).child("linus").child("home").set(num);
+    if (prefix.startsWith("lA")) matchesRef.child(key).child("linus").child("away").set(num);
+
+    if (prefix.startsWith("fH")) matchesRef.child(key).child("fannie").child("home").set(num);
+    if (prefix.startsWith("fA")) matchesRef.child(key).child("fannie").child("away").set(num);
+
+    if (prefix.startsWith("rH")) matchesRef.child(key).child("result").child("home").set(num);
+    if (prefix.startsWith("rA")) matchesRef.child(key).child("result").child("away").set(num);
   }
 </script>
 </body>
