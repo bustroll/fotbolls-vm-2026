@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>VM-tips – Linus & Fannie</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
+  <!-- RÄTT Firebase-version (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <style>
     body { font-family: Arial; margin: 20px; background: #f5f5f5; }
@@ -46,8 +48,8 @@
 <script>
   // 🔥 1. Klistra in din Firebase config här:
   // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
     apiKey: "AIzaSyCf5QQfpI4Kb9ajnaigcrlr9LIQGtEDxvY",
     authDomain: "fotbolls-vm-2026-a35bc.firebaseapp.com",
     databaseURL: "https://fotbolls-vm-2026-a35bc-default-rtdb.europe-west1.firebasedatabase.app",
@@ -56,14 +58,15 @@
     messagingSenderId: "928596865074",
     appId: "1:928596865074:web:8a157af193b73ab0938c2b",
     measurementId: "G-78DCQ1Z56P"
-  };
-  const app = firebase.initializeApp(firebaseConfig);
+    };
+
+  firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const matchesRef = db.ref("matches");
 
   // 🔥 2. Lyssna i realtid
   matchesRef.on("value", snapshot => {
-    const data = snapshot.val() || [];
+    const data = snapshot.val() || {};
     renderTable(data);
   });
 
@@ -119,7 +122,6 @@
 
       tbody.appendChild(tr);
 
-      // Lås tips om resultat finns
       const resultExists = m.result.home !== null && m.result.away !== null;
 
       ["lH","lA","fH","fA"].forEach(prefix => {
