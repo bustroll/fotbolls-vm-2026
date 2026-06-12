@@ -167,7 +167,12 @@ function renderTables(matches) {
   playedBody.innerHTML = "";
 
   const list = Object.entries(matches).map(([key, m]) => ({ key, ...m }));
-  list.sort((a, b) => a.datetime.localeCompare(b.datetime));
+  list.sort((a, b) => {
+    const da = a.datetime || "";
+    const db = b.datetime || "";
+    return da.localeCompare(db);
+  });
+
 
   const now = new Date();
 
