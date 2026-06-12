@@ -13,7 +13,7 @@
     .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
-    input[type="number"], input[type="text"] { width: 80px; }
+    input[type="number"], input[type="text"] { width: 40px; }
     .btn { padding: 6px 10px; border: 1px solid #ccc; background: #eee; cursor: pointer; }
     .btn:hover { background: #e0e0e0; }
     h2 { margin-top: 40px; }
@@ -179,10 +179,13 @@ function renderTables(matches) {
   list.forEach(m => {
     const row = createRow(m);
 
-    // Sortering baserat på textdatum (du skriver själv)
-    if (m.datetime > new Date().toISOString()) {
+    const hasResult = m.result && m.result.home !== null && m.result.away !== null;
+
+    if (!hasResult) {
+      // Inget resultat → alltid kommande
       upcomingBody.appendChild(row);
     } else {
+      // Resultat finns → lägg i spelade
       playedBody.prepend(row);
     }
   });
@@ -219,6 +222,16 @@ function createRow(m) {
       <input type="number" id="rA${m.key}" value="${result.away ?? ""}">
     </td>
   `;
+
+  // ⭐ Lås tippning om resultat finns
+  const hasResult = result.home !== null && result.away !== null;
+
+  if (hasResult) {
+    tr.querySelector(`#lH${m.key}`).disabled = true;
+    tr.querySelector(`#lA${m.key}`).disabled = true;
+    tr.querySelector(`#fH${m.key}`).disabled = true;
+    tr.querySelector(`#fA${m.key}`).disabled = true;
+  }
 
   /* ⭐ Grön markering */
   if (result.home !== null && result.away !== null) {
@@ -280,6 +293,7 @@ function updateScoreboard(matches) {
       if (tH === rH && tA === rA) {
         user.points += 3;
         user.exact++;
+        user.winner++;
       } else {
         const tipWinner =
           tH > tA ? "home" :
