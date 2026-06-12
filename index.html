@@ -179,7 +179,7 @@ function renderTables(matches) {
   list.forEach(m => {
     const row = createRow(m);
 
-    const hasResult = Number.isInteger(result.home) && Number.isInteger(result.away);
+    const hasResult = m.result && m.result.home !== null && m.result.away !== null;
 
     if (!hasResult) {
       // Inget resultat → alltid kommande
@@ -224,7 +224,7 @@ function createRow(m) {
   `;
 
   // ⭐ Lås tippning om resultat finns
-  const hasResult = result.home !== null && result.away !== null;
+  const hasResult = Number.isInteger(result.home) && Number.isInteger(result.away);
 
   if (hasResult) {
     tr.querySelector(`#lH${m.key}`).disabled = true;
