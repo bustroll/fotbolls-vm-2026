@@ -17,6 +17,9 @@
     .btn { padding: 6px 10px; border: 1px solid #ccc; background: #eee; cursor: pointer; }
     .btn:hover { background: #e0e0e0; }
     h2 { margin-top: 40px; }
+    #team1, #team2 {
+      width: 100px;
+    }
   </style>
 
   <script>
@@ -45,8 +48,8 @@
   <!-- ⭐ MANUELL MATCHINLÄGGNING -->
   <h2>Lägg till match manuellt</h2>
 
-  Datum & tid (skriv själv, t.ex. "2026‑06‑11 20:00"):<br>
-  <input type="text" id="matchDatetime">
+  Datum & tid:<br>
+  <input type="datetime-local" id="matchDatetime">
 
   <br><br>
 
@@ -200,7 +203,7 @@ function createRow(m) {
   const result = m.result || {};
 
   tr.innerHTML = `
-    <td>${m.datetime}</td>
+    <td>${m.datetime.split("T")[0]}<br>${m.datetime.split("T")[1]}</td>
     <td>${m.team1}</td>
     <td>${m.team2}</td>
 
