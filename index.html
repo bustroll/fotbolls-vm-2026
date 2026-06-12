@@ -4,40 +4,82 @@
   <meta charset="UTF-8">
   <title>VM-tips – Linus & Fannie</title>
 
-  <!-- RÄTT Firebase-version (v8) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <style>
     body { font-family: Arial; margin: 20px; background: #f5f5f5; }
-    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+    .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
     input[type="number"] { width: 45px; }
-    input[type="text"] { width: 110px; }
     .btn { padding: 6px 10px; border: 1px solid #ccc; background: #eee; cursor: pointer; }
     .btn:hover { background: #e0e0e0; }
-    .disabled { background: #fafafa; color: #999; }
+    h2 { margin-top: 40px; }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>VM-tips – Linus & Fannie</h1>
 
-  <div>
-    <input type="text" id="team1" placeholder="Lag 1">
-    <input type="text" id="team2" placeholder="Lag 2">
-    <button class="btn" id="addMatchBtn">Lägg till match</button>
-  </div>
+  <button class="btn" onclick="importMatches()">Importera/uppdatera matcher från OpenLigaDB</button>
 
-  <table id="matchesTable">
+  <!-- ⭐ STÄLLNINGSTABELL -->
+  <h2>Ställning</h2>
+  <table id="scoreTable">
     <thead>
       <tr>
-        <th>#</th>
+        <th>Spelare</th>
+        <th>Poäng</th>
+        <th>Rätt resultat</th>
+        <th>Rätt vinnare</th>
+        <th>Fel</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Linus</td>
+        <td id="linusPoints">0</td>
+        <td id="linusExact">0</td>
+        <td id="linusWinner">0</td>
+        <td id="linusWrong">0</td>
+      </tr>
+      <tr>
+        <td>Fannie</td>
+        <td id="fanniePoints">0</td>
+        <td id="fannieExact">0</td>
+        <td id="fannieWinner">0</td>
+        <td id="fannieWrong">0</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ⭐ KOMMANDE MATCHER -->
+  <h2>Kommande matcher</h2>
+  <table id="upcomingTable">
+    <thead>
+      <tr>
+        <th>Datum & tid</th>
         <th>Lag 1</th>
         <th>Lag 2</th>
-        <th>Linus tips</th>
-        <th>Fannie tips</th>
+        <th>Linus tippning</th>
+        <th>Fannies tippning</th>
+        <th>Resultat</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- ⭐ SPELADE MATCHER -->
+  <h2>Spelade matcher</h2>
+  <table id="playedTable">
+    <thead>
+      <tr>
+        <th>Datum & tid</th>
+        <th>Lag 1</th>
+        <th>Lag 2</th>
+        <th>Linus tippning</th>
+        <th>Fannies tippning</th>
         <th>Resultat</th>
       </tr>
     </thead>
@@ -46,7 +88,58 @@
 </div>
 
 <script>
-  // 🔥 Din Firebase config (helt korrekt)
+  // 🇸🇪 Svenska lagnamn
+  const teamNamesSV = {
+    "Mexico": "Mexiko",
+    "South Africa": "Sydafrika",
+    "Germany": "Tyskland",
+    "Sweden": "Sverige",
+    "Argentina": "Argentina",
+    "Brazil": "Brasilien",
+    "France": "Frankrike",
+    "Spain": "Spanien",
+    "Portugal": "Portugal",
+    "England": "England",
+    "Netherlands": "Nederländerna",
+    "Belgium": "Belgien",
+    "Denmark": "Danmark",
+    "Norway": "Norge",
+    "Finland": "Finland",
+    "USA": "USA",
+    "Canada": "Kanada",
+    "Japan": "Japan",
+    "South Korea": "Sydkorea",
+    "China": "Kina",
+    "Australia": "Australien",
+    "New Zealand": "Nya Zeeland",
+    "Saudi Arabia": "Saudiarabien",
+    "Qatar": "Qatar",
+    "Iran": "Iran",
+    "Iraq": "Irak",
+    "Morocco": "Marocko",
+    "Tunisia": "Tunisien",
+    "Egypt": "Egypten",
+    "Cameroon": "Kamerun",
+    "Nigeria": "Nigeria",
+    "Ghana": "Ghana",
+    "Senegal": "Senegal",
+    "Croatia": "Kroatien",
+    "Serbia": "Serbien",
+    "Poland": "Polen",
+    "Switzerland": "Schweiz",
+    "Austria": "Österrike",
+    "Italy": "Italien",
+    "Turkey": "Turkiet",
+    "Greece": "Grekland",
+    "Uruguay": "Uruguay",
+    "Chile": "Chile",
+    "Colombia": "Colombia",
+    "Ecuador": "Ecuador",
+    "Paraguay": "Paraguay",
+    "Peru": "Peru"
+  };
+
+  // 🔥 Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCf5QQfpI4Kb9ajnaigcrlr9LIQGtEDxvY",
     authDomain: "fotbolls-vm-2026-a35bc.firebaseapp.com",
@@ -58,7 +151,6 @@
     measurementId: "G-78DCQ1Z56P"
   };
 
-  // 🔥 Initiera Firebase (v8 syntax)
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const matchesRef = db.ref("matches");
@@ -66,102 +158,188 @@
   // 🔥 Realtidslyssning
   matchesRef.on("value", snapshot => {
     const data = snapshot.val() || {};
-    renderTable(data);
+    renderTables(data);
+    updateScoreboard(data);
   });
 
-  // 🔥 Lägg till match
-  document.getElementById("addMatchBtn").onclick = () => {
-    const t1 = team1.value.trim();
-    const t2 = team2.value.trim();
-    if (!t1 || !t2) return alert("Fyll i båda lagen");
+  // ⭐ Importera matcher från OpenLigaDB
+  async function importMatches() {
+    const url = "https://api.openligadb.de/getmatchdata/worldcup/2026";
+    const res = await fetch(url);
+    const matches = await res.json();
 
-    matchesRef.push({
-      team1: t1,
-      team2: t2,
-      linus: { home: null, away: null },
-      fannie: { home: null, away: null },
-      result: { home: null, away: null }
-    });
+    matches.forEach(m => {
+      const id = m.MatchID;
 
-    team1.value = "";
-    team2.value = "";
-  };
+      const team1Name = teamNamesSV[m.Team1.TeamName] || m.Team1.TeamName;
+      const team2Name = teamNamesSV[m.Team2.TeamName] || m.Team2.TeamName;
 
-  // 🔥 Rendera tabellen
-  function renderTable(matches) {
-    const tbody = document.querySelector("#matchesTable tbody");
-    tbody.innerHTML = "";
-
-    const keys = Object.keys(matches);
-
-    keys.forEach((key, i) => {
-        const m = matches[key] || {};
-
-        // ⭐ Säkra default-värden (förhindrar krascher)
-        const linus  = m.linus  || { home: null, away: null };
-        const fannie = m.fannie || { home: null, away: null };
-        const result = m.result || { home: null, away: null };
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-        <td>${i + 1}</td>
-        <td>${m.team1 || ""}</td>
-        <td>${m.team2 || ""}</td>
-
-        <td>
-            <input type="number" id="lH${key}" value="${linus.home ?? ""}">
-            -
-            <input type="number" id="lA${key}" value="${linus.away ?? ""}">
-        </td>
-
-        <td>
-            <input type="number" id="fH${key}" value="${fannie.home ?? ""}">
-            -
-            <input type="number" id="fA${key}" value="${fannie.away ?? ""}">
-        </td>
-
-        <td>
-            <input type="number" id="rH${key}" value="${result.home ?? ""}">
-            -
-            <input type="number" id="rA${key}" value="${result.away ?? ""}">
-        </td>
-        `;
-
-        tbody.appendChild(tr);
-
-        // ⭐ Lås tips om resultat finns
-        const resultExists = result.home !== null && result.away !== null;
-
-        ["lH","lA","fH","fA"].forEach(prefix => {
-        const el = document.getElementById(prefix + key);
-        if (resultExists) {
-            el.disabled = true;
-            el.classList.add("disabled");
+      matchesRef.child(id).update({
+        team1: team1Name,
+        team2: team2Name,
+        datetime: m.MatchDateTime,
+        result: {
+          home: m.MatchResults?.[0]?.PointsTeam1 ?? null,
+          away: m.MatchResults?.[0]?.PointsTeam2 ?? null
         }
-        el.onchange = () => updateField(key, prefix, el.value);
-        });
-
-        ["rH","rA"].forEach(prefix => {
-        const el = document.getElementById(prefix + key);
-        el.onchange = () => updateField(key, prefix, el.value);
-        });
+      });
     });
+  }
+
+  // ⭐ Rendera tabeller
+  function renderTables(matches) {
+    const upcomingBody = document.querySelector("#upcomingTable tbody");
+    const playedBody = document.querySelector("#playedTable tbody");
+
+    upcomingBody.innerHTML = "";
+    playedBody.innerHTML = "";
+
+    const list = Object.entries(matches).map(([key, m]) => ({ key, ...m }));
+    list.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    const now = new Date();
+
+    list.forEach(m => {
+      if (!m.datetime) return;
+
+      const dt = new Date(m.datetime);
+      const row = createRow(m);
+
+      if (dt >= now) {
+        upcomingBody.appendChild(row);
+      } else {
+        playedBody.prepend(row);
+      }
+    });
+  }
+
+  // ⭐ Skapa rad
+  function createRow(m) {
+    const tr = document.createElement("tr");
+
+    const linus = m.linus || {};
+    const fannie = m.fannie || {};
+    const result = m.result || {};
+
+    const dtString = m.datetime
+      ? new Date(m.datetime).toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" })
+      : "";
+
+    tr.innerHTML = `
+      <td>${dtString}</td>
+      <td>${m.team1}</td>
+      <td>${m.team2}</td>
+
+      <td>
+        <input type="number" id="lH${m.key}" value="${linus.home ?? ""}">
+        -
+        <input type="number" id="lA${m.key}" value="${linus.away ?? ""}">
+      </td>
+
+      <td>
+        <input type="number" id="fH${m.key}" value="${fannie.home ?? ""}">
+        -
+        <input type="number" id="fA${m.key}" value="${fannie.away ?? ""}">
+      </td>
+
+      <td>
+        <input type="number" id="rH${m.key}" value="${result.home ?? ""}">
+        -
+        <input type="number" id="rA${m.key}" value="${result.away ?? ""}">
+      </td>
+    `;
+
+    // ⭐ Markera rätt tips
+    if (result.home !== null && result.away !== null) {
+      const linusCell = tr.children[3];
+      const fannieCell = tr.children[4];
+
+      if (linus.home == result.home && linus.away == result.away)
+        linusCell.style.backgroundColor = "#c8f7c5";
+
+      if (fannie.home == result.home && fannie.away == result.away)
+        fannieCell.style.backgroundColor = "#c8f7c5";
     }
 
-  // 🔥 Uppdatera fält i Firebase
+    // ⭐ Event listeners
+    ["lH","lA","fH","fA","rH","rA"].forEach(prefix => {
+      const el = tr.querySelector(`#${prefix}${m.key}`);
+      if (!el) return;
+      el.onchange = () => updateField(m.key, prefix, el.value);
+    });
+
+    return tr;
+  }
+
+  // ⭐ Uppdatera Firebase
   function updateField(key, prefix, value) {
     const num = value === "" ? null : Number(value);
 
-    if (prefix.startsWith("lH")) matchesRef.child(key).child("linus").child("home").set(num);
-    if (prefix.startsWith("lA")) matchesRef.child(key).child("linus").child("away").set(num);
+    if (prefix.startsWith("lH")) matchesRef.child(key).child("linus/home").set(num);
+    if (prefix.startsWith("lA")) matchesRef.child(key).child("linus/away").set(num);
 
-    if (prefix.startsWith("fH")) matchesRef.child(key).child("fannie").child("home").set(num);
-    if (prefix.startsWith("fA")) matchesRef.child(key).child("fannie").child("away").set(num);
+    if (prefix.startsWith("fH")) matchesRef.child(key).child("fannie/home").set(num);
+    if (prefix.startsWith("fA")) matchesRef.child(key).child("fannie/away").set(num);
 
-    if (prefix.startsWith("rH")) matchesRef.child(key).child("result").child("home").set(num);
-    if (prefix.startsWith("rA")) matchesRef.child(key).child("result").child("away").set(num);
+    if (prefix.startsWith("rH")) matchesRef.child(key).child("result/home").set(num);
+    if (prefix.startsWith("rA")) matchesRef.child(key).child("result/away").set(num);
   }
+
+  // ⭐ Poängräkning
+  function updateScoreboard(matches) {
+    let linus = { points: 0, exact: 0, winner: 0, wrong: 0 };
+    let fannie = { points: 0, exact: 0, winner: 0, wrong: 0 };
+
+    Object.values(matches).forEach(m => {
+      if (!m.result || m.result.home === null || m.result.away === null) return;
+
+      const rH = m.result.home;
+      const rA = m.result.away;
+
+      const winner =
+        rH > rA ? "home" :
+        rA > rH ? "away" : "draw";
+
+      function scoreUser(user, tips) {
+        if (!tips || tips.home === null || tips.away === null) return;
+
+        const tH = tips.home;
+        const tA = tips.away;
+
+        if (tH === rH && tA === rA) {
+          user.points += 3;
+          user.exact++;
+        } else {
+          const tipWinner =
+            tH > tA ? "home" :
+            tA > tH ? "away" : "draw";
+
+          if (tipWinner === winner) {
+            user.points += 1;
+            user.winner++;
+          } else {
+            user.wrong++;
+          }
+        }
+      }
+
+      scoreUser(linus, m.linus);
+      scoreUser(fannie, m.fannie);
+    });
+
+    document.getElementById("linusPoints").textContent = linus.points;
+    document.getElementById("linusExact").textContent = linus.exact;
+    document.getElementById("linusWinner").textContent = linus.winner;
+    document.getElementById("linusWrong").textContent = linus.wrong;
+
+    document.getElementById("fanniePoints").textContent = fannie.points;
+    document.getElementById("fannieExact").textContent = fannie.exact;
+    document.getElementById("fannieWinner").textContent = fannie.winner;
+    document.getElementById("fannieWrong").textContent = fannie.wrong;
+  }
+
+  // ⭐ Automatisk uppdatering var 10:e minut
+  setInterval(importMatches, 10 * 60 * 1000);
 </script>
 </body>
 </html>
