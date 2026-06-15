@@ -171,9 +171,9 @@ function renderTables(matches) {
 
   const list = Object.entries(matches).map(([key, m]) => ({ key, ...m }));
   list.sort((a, b) => {
-    const da = a.datetime || "";
-    const db = b.datetime || "";
-    return da.localeCompare(db);
+    const da = new Date(a.datetime);
+    const db = new Date(b.datetime);
+    return da - db;
   });
 
 
@@ -182,14 +182,12 @@ function renderTables(matches) {
   list.forEach(m => {
     const row = createRow(m);
 
-    const hasResult = m.result && m.result.home !== null && m.result.away !== null;
+    const hasResult = m.result && Number.isInteger(m.result.home) && Number.isInteger(m.result.away);
 
-    if (!hasResult) {
-      // Inget resultat → alltid kommande
-      upcomingBody.appendChild(row);
+    if (hasResult) {
+      playedBody.prepend(row);
     } else {
-      // Resultat finns → lägg i spelade
-      playedBody.appendChild(row);
+      upcomingBody.appendChild(row);
     }
   });
 }
@@ -261,6 +259,8 @@ function createRow(m) {
 /* ⭐ Uppdatera Firebase */
 function updateField(key, prefix, value) {
   const num = value === "" ? null : Number(value);
+  if (isNaN(num)) return; // skriv inte NaN till Firebase
+
 
   if (prefix.startsWith("lH")) matchesRef.child(key).child("linus/home").set(num);
   if (prefix.startsWith("lA")) matchesRef.child(key).child("linus/away").set(num);
